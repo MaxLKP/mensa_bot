@@ -10,7 +10,7 @@ with open(config_file, 'r') as file:
 api_token = config["telegram"]["token"]
 chat_id = config["telegram"]["group_id"]
 
-help_message = "Benutzung: \n /gericht + <mensa>: Heutiges Menü der gewählten Mensa \n /gericht + <mens> + <tag> + <datum>: Menü der Mensa an diesem Datum \n Bsp: /gericht vita Dienstag 03.02.2026"
+help_message = "Benutzung: \n /gericht + <mensa>: Heutiges Menü der gewählten Mensa \n /gericht + <mens> + <tag> + <datum>: Menü der Mensa an diesem Datum \n Bsp: /gericht vita Dienstag 03.02.2026 \n Akutelle Mensen: academica, vita, bayernallee"
 
 async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id == chat_id:
