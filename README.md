@@ -1,5 +1,5 @@
 # Mensa Bot
-Can be used to parse menue of cafeteria and send it to Telegram group using a [bot](https://docs.python-telegram-bot.org/en/stable/).
+Can be used to parse menue of [cafeteria](https://www.studierendenwerk-aachen.de/de/gastronomie/Speisepl%C3%A4ne.html) and send it to Telegram group using a [bot](https://docs.python-telegram-bot.org/en/stable/).
 
 At the moment, three cafeterias are supported but for any cafeteria, the URL can be added to be read as well. Take care to use the correct URL to ensure reading suceeds. 
 
