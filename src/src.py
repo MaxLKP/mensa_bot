@@ -49,11 +49,11 @@ def get_gerichte(mensa, day = None, date = None):
                     gerichte[kategorie] = "Geschlossen"
                 else:
                     gerichte[kategorie] = gerichte_raw[kategorie].split(r'menue-nutr', 1)[1].split(r"</span>", 1)[1].split(r"<sup>", 1)[0].split(r"<span", 1)[0]
-            else: gerichte[kategorie] = "Fehler"
+            else: gerichte[kategorie] = "Kein Gericht"
 
         return gerichte
     except Exception as e:
         print("Couldn't find entries. Is the date set correct?")
         for kategorie in kategorien:
-            gerichte[kategorie] = "Fehler"
+            gerichte[kategorie] = "Kein Gericht"
         return gerichte

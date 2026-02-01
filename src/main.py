@@ -1,6 +1,6 @@
 from src import *
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Updater
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Updater, JobQueue
 import sys
 
 config_file = "/home/maxlkp/.telegram_config.yaml"
@@ -22,7 +22,7 @@ async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TY
                 gerichte = get_gerichte(mensa, day = day, date = date)
             elif len(context.args) == 1:
                 mensa = context.args[0]
-                gerichte = get_gerichte(mensa)
+                gerichte = get_gerichte(mensa, day = None, date = None)
             else: pass
             output = ""
             for key, gericht in gerichte.items():
@@ -34,7 +34,7 @@ async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TY
 
             await context.bot.send_message(chat_id = chat_id, text = response)
             await context.bot.send_message(chat_id = chat_id, text = output.encode('latin-1').decode('utf-8'))
-            await context.bot.send_message(chat_id = chat_id, text = "Wenn du eine Umfrage zum heutigen Essen starten willst, nutze /umfrage!")
+            await context.bot.send_message(chat_id = chat_id, text = "Wenn du eine Umfrage zum heutigen Essen starten willst, nutze /umfrage!\nWenn du wissen willst, wer mitkommt, nutze /wannmensa")
         except Exception as e:
             print(e)
             await update.message.reply_text("An error occoured.")
@@ -67,8 +67,11 @@ async def wann_mensa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             for möglichkeit in context.args:
                 umfrage.append(möglichkeit)
             await context.bot.send_poll(update.effective_chat.id, question, umfrage, is_anonymous=False, allows_multiple_answers=False)
-        else:
+        elif len(context.args) == 1:
             text = f"{update.effective_user.first_name} möchte um {context.args[0]} in die Mensa gehen! Wer ist dabei?"
+            await context.bot.send_message(chat_id = chat_id, text = text)
+        else: 
+            text = f"{update.effective_user.first_name} möchte in die Mensa gehen! Wer ist dabei?"
             await context.bot.send_message(chat_id = chat_id, text = text)
     else:
         await context.application.stop()
@@ -83,21 +86,34 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.application.shutdown()
         sys.exit(0)
 
+async def send_welcome(context: ContextTypes.DEFAULT_TYPE) -> None:
+    date, day = get_day_date()
+    welcome = f"Hallo! Es ist {day}, der {date}. \nDer Bot ist jetzt einsatzbereit!\nBenutze /help für Hilfe."
+    await context.bot.send_message(chat_id = chat_id, text = welcome)
+
+async def send_goodbye(context: ContextTypes.DEFAULT_TYPE) -> None:
+    goodbye = f"Der Bot wurde vom Host beendet. See you soon!"
+    await context.bot.send_message(chat_id = chat_id, text = goodbye)
+
 async def stop_all():
     sys.exit(0)
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(api_token).build()
-    help_handler = CommandHandler("help", help)
-    gericht_handler = CommandHandler('gericht', respond_gerichte_vita)
-    umfrage_handler = CommandHandler("umfrage", poll)
-    wann_handler = CommandHandler("wannmensa", wann_mensa)
-    stop_handler = CommandHandler('stop', stop)
-    application.add_handler(help_handler)
-    application.add_handler(gericht_handler)
-    application.add_handler(stop_handler)
-    application.add_handler(umfrage_handler)
-    application.add_handler(wann_handler)
-    application.run_polling()
-
-sys.exit(0)
+        application = ApplicationBuilder().token(api_token).build()
+        try:
+            application.job_queue.run_once(send_welcome, 0)
+            help_handler = CommandHandler("help", help)
+            gericht_handler = CommandHandler('gericht', respond_gerichte_vita)
+            umfrage_handler = CommandHandler("umfrage", poll)
+            wann_handler = CommandHandler("wannmensa", wann_mensa)
+            stop_handler = CommandHandler('stop', stop)
+            application.add_handler(help_handler)
+            application.add_handler(gericht_handler)
+            application.add_handler(stop_handler)
+            application.add_handler(umfrage_handler)
+            application.add_handler(wann_handler)
+            application.run_polling()
+        except KeyboardInterrupt:
+            application.job_queue.run_once(send_goodbye, 0)
+            application.stop()
+            application.shutdown()
