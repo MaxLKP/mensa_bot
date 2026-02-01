@@ -10,7 +10,7 @@ with open(config_file, 'r') as file:
 api_token = config["telegram"]["token"]
 chat_id = config["telegram"]["group_id"]
 
-help_message = "Benutzung: \n/gericht + <mensa>: Heutiges Menü der gewählten Mensa \n/gericht + <mens> + <tag> + <datum>: Menü der Mensa an diesem Datum \nBsp: /gericht vita Dienstag 03.02.2026\n Akutelle Mensen: academica, vita, bayernallee"
+help_message = "Benutzung: \n/gericht + <mensa>: Heutiges Menü der gewählten Mensa \n/gericht + <mens> + <tag> + <datum>: Menü der Mensa an diesem Datum \nBsp: /gericht vita Dienstag 03.02.2026 \n/wannmensa <uhrzeit>: Frage wer mit in die Mensa will \n/wannmensa <uhrzeit1> <uhrzeit2> ...: Starte Umfrage zur Mensa Zeit \nAkutelle Mensen: academica, vita, bayernallee"
 
 async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id == chat_id:
@@ -59,9 +59,25 @@ async def poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     answers = ["\U00002B50", "\U00002B50\U00002B50", "\U00002B50\U00002B50\U00002B50", "\U00002B50\U00002B50\U00002B50\U00002B50", "\U00002B50\U00002B50\U00002B50\U00002B50\U00002B50"]
     await context.bot.send_poll(update.effective_chat.id, questions, answers, is_anonymous=False, allows_multiple_answers=False,)
 
+async def wann_mensa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_chat.id == chat_id:
+        question = f"{update.effective_user.first_name} möchte in die Mensa gehen! Wer ist dabei?"
+        if len(context.args) != 0 and len(context.args) >= 2:
+            umfrage = []
+            for möglichkeit in context.args:
+                umfrage.append(möglichkeit)
+            await context.bot.send_poll(update.effective_chat.id, question, umfrage, is_anonymous=False, allows_multiple_answers=False)
+        else:
+            text = f"{update.effective_user.first_name} möchte um {context.args[0]} in die Mensa gehen! Wer ist dabei?"
+            await context.bot.send_message(chat_id = chat_id, text = text)
+    else:
+        await context.application.stop()
+        await context.application.shutdown()
+        sys.exit(0)
+
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id == chat_id:
-        await update.message.reply_text(help_message)
+        await context.bot.send_message(chat_id = chat_id, text = help_message)
     else:
         await context.application.stop()
         await context.application.shutdown()
@@ -75,11 +91,13 @@ if __name__ == '__main__':
     help_handler = CommandHandler("help", help)
     gericht_handler = CommandHandler('gericht', respond_gerichte_vita)
     umfrage_handler = CommandHandler("umfrage", poll)
+    wann_handler = CommandHandler("wannmensa", wann_mensa)
     stop_handler = CommandHandler('stop', stop)
     application.add_handler(help_handler)
     application.add_handler(gericht_handler)
     application.add_handler(stop_handler)
     application.add_handler(umfrage_handler)
+    application.add_handler(wann_handler)
     application.run_polling()
 
 sys.exit(0)
