@@ -2,6 +2,7 @@ from src import *
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Updater, JobQueue
 import sys
+import random
 
 config_file = "/home/maxlkp/.telegram_config.yaml"
 with open(config_file, 'r') as file:
@@ -10,7 +11,7 @@ with open(config_file, 'r') as file:
 api_token = config["telegram"]["token"]
 chat_id = config["telegram"]["group_id"]
 
-help_message = "Benutzung: \n/gericht + <mensa>: Heutiges Menü der gewählten Mensa \n/gericht + <mens> + <tag> + <datum>: Menü der Mensa an diesem Datum \nBsp: /gericht vita Dienstag 03.02.2026 \n/wannmensa <uhrzeit>: Frage wer mit in die Mensa will \n/wannmensa <uhrzeit1> <uhrzeit2> ...: Starte Umfrage zur Mensa Zeit \nAkutelle Mensen: academica, vita, bayernallee"
+help_message = "Benutzung: \nMenü der Mensa an Datum: \n/gericht + <mensa> (opt: + <Tag> + <datum>, sonst Heute) \nBsp: /gericht vita Dienstag 03.02.2026 \nFrage, wer mit in die Mensa will: \n/wannmensa (optional: <uhrzeit 1> + <uhreit 2> + ...) \nAkutelle unterstützte Mensen: \nacademica, vita, bayernallee \nhttps://github.com/MaxLKP/mensa_bot/"
 
 async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id == chat_id:
@@ -22,7 +23,8 @@ async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TY
                 gerichte = get_gerichte(mensa, day = day, date = date)
             elif len(context.args) == 1:
                 mensa = context.args[0]
-                gerichte = get_gerichte(mensa, day = None, date = None)
+                date, day = get_day_date()
+                gerichte = get_gerichte(mensa, day = day, date = date)
             else: pass
             output = ""
             for key, gericht in gerichte.items():
@@ -34,13 +36,32 @@ async def respond_gerichte_vita(update: Update, context: ContextTypes.DEFAULT_TY
 
             await context.bot.send_message(chat_id = chat_id, text = response)
             await context.bot.send_message(chat_id = chat_id, text = output.encode('latin-1').decode('utf-8'))
-            await context.bot.send_message(chat_id = chat_id, text = "Wenn du eine Umfrage zum heutigen Essen starten willst, nutze /umfrage!\nWenn du wissen willst, wer mitkommt, nutze /wannmensa")
+            await context.bot.send_message(chat_id = chat_id, text = "Wenn du das heutige Menü bewerten willst, nutze /umfrage!\nWenn du wissen willst, wer mitkommt, nutze /wannmensa")
         except Exception as e:
             print(e)
             await update.message.reply_text("An error occoured.")
     else:
         await context.application.shutdown()
         sys.exit(0)
+
+async def mensa_update(context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        mensa = random.choice(["vita", "academica", "bayernallee"])
+        date, day = get_day_date()
+        gerichte = get_gerichte("academica", day = day, date = date)
+        output = ""
+        for key, gericht in gerichte.items():
+            output = output + f"{key}: {gerichte[key]} \n"
+        response = f"Hallo an Alle! Der Mensa Bot ist jetzt aktiv. \nNutze /help für mögliche Befehle.\nVorab: Es ist {day}, der {date}. Hier sind die heutigen Gerichte der Mensa {mensa}."
+        if "Schnitzel" in output or "schnitzel" in output:
+            response = response + "\nUnd gute Nachrichten! Es ist Schnitzeltag!"
+        else: pass
+        await context.bot.send_message(chat_id = chat_id, text = response)
+        await context.bot.send_message(chat_id = chat_id, text = output.encode('latin-1').decode('utf-8'))
+        await context.bot.send_message(chat_id = chat_id, text = "Hunger bekommen?\nWenn du wissen willst, wer mitkommt, nutze /wannmensa\nWenn du das heutige Menü bewerten willst, nutze /umfrage!")
+    except Exception as e:
+        print(e)
+        await context.bot.send_message(chat_id = chat_id, text = "An error occoured.")
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id == chat_id:
@@ -101,7 +122,8 @@ async def stop_all():
 if __name__ == '__main__':
         application = ApplicationBuilder().token(api_token).build()
         try:
-            application.job_queue.run_once(send_welcome, 0)
+            #application.job_queue.run_once(send_welcome, 0)
+            application.job_queue.run_once(mensa_update, 0)
             help_handler = CommandHandler("help", help)
             gericht_handler = CommandHandler('gericht', respond_gerichte_vita)
             umfrage_handler = CommandHandler("umfrage", poll)
